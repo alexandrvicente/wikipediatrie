@@ -7,7 +7,6 @@ setup(
     include_package_data=True,
     install_requires=[
         'Click==6.6',
-        'pypandoc==1.3.3',
         'lz4==0.8.2',
         'colorama==0.3.7',
     ],

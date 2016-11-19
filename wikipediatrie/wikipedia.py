@@ -1,5 +1,4 @@
 from .trie import TrieNode
-import pypandoc
 import re
 import bz2
 from xml.sax import parse as parse_sax
@@ -7,7 +6,7 @@ from xml.sax.handler import ContentHandler
 
 
 class TrieBuilder:
-    whitespace_regex = re.compile("\W+")
+    regex = re.compile("\w+", re.U)
 
     def __init__(self, file):
         self.file = file
@@ -18,13 +17,8 @@ class TrieBuilder:
         with bz2.BZ2File(self.file, "r") as file:
             parse_sax(file, WikipediaContentHandler(self))
 
-    def add_article(self, source):
-        try:
-            text = pypandoc.convert_text(source, format="mediawiki", to="plain")
-        except:
-            text = ""
-
-        for word in TrieBuilder.whitespace_regex.split(text):
+    def add_article(self, text):
+        for word in TrieBuilder.regex.findall(text):
             self.trie.add(word)
 
 
