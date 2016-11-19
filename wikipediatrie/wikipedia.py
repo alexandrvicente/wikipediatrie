@@ -11,7 +11,7 @@ class TrieBuilder:
     def __init__(self, file):
         self.file = file
         self.trie = TrieNode()
-        self.build_trie()
+        self.article_count = 0
 
     def build_trie(self):
         with bz2.BZ2File(self.file, "r") as file:
@@ -20,6 +20,9 @@ class TrieBuilder:
     def add_article(self, text):
         for word in TrieBuilder.regex.findall(text):
             self.trie.add(word)
+        self.article_count += 1
+        if self.progress_handler:
+            self.progress_handler(self.article_count)
 
 
 class WikipediaContentHandler(ContentHandler):

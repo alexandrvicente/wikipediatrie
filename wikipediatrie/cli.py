@@ -23,6 +23,13 @@ def cli():
 @click.argument("trie_file")
 def generate(dump, trie_file):
     trie_builder = TrieBuilder(dump)
+
+    def progress_handler(count):
+        click.echo("\r" + str(count) + " artigos processados", nl=False)
+
+    trie_builder.progress_handler = progress_handler
+    trie_builder.build_trie()
+
     with open(trie_file, "wb") as file:
         trie_builder.trie.to_file(file)
 
