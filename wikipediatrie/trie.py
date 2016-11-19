@@ -67,12 +67,20 @@ class TrieNode:
             for node in child.get_nodes(child_prefix):
                 yield node
 
-    def get_top_nodes(self, count):
+    def get_top_nodes(self, count, progress_handler=None, completion_handler=None):
         occurrence_groups = {}
+        node_count = 0
         for node in self.get_nodes():
             key = node.occurrences
             value = occurrence_groups.get(key, []) + [node]
             occurrence_groups[key] = value
+            if progress_handler:
+                node_count += 1
+                progress_handler(node_count)
+
+        if completion_handler:
+            completion_handler()
+
         keys = sorted(occurrence_groups.keys(), reverse=True)
         for key in keys:
             for node in occurrence_groups[key]:
@@ -91,10 +99,15 @@ class TrieNode:
             else:
                 children.append(None)
 
-        return {
+        _dict = {
             "children": children,
             "occurrences": self.occurrences
         }
+
+        if hasattr(self, "progress"):
+            _dict["progress"] = self.progress
+
+        return _dict
 
     @staticmethod
     def from_dict(_dict):
@@ -103,6 +116,9 @@ class TrieNode:
 
         node = TrieNode()
         node.occurrences = _dict["occurrences"]
+
+        if "progress" in _dict:
+            node.progress = _dict["progress"]
 
         for i, child in enumerate(_dict["children"]):
             node.children[i] = TrieNode.from_dict(child)
@@ -118,7 +134,10 @@ class TrieNode:
 
     def to_file(self, file):
         data = lz4.compress(self.to_json())
+        file.seek(0)
+        file.truncate()
         file.write(data)
+        file.flush()
 
     @staticmethod
     def from_file(file):
@@ -132,7 +151,7 @@ class TrieNode:
         return self.occurrences > other.occurrences
 
     def __str__(self):
-        if self.word:
+        if hasattr(self, "word"):
             return self.word + " (" + str(self.occurrences) + " ocorrências)"
         else:
             return str(self.occurrences) + " ocorrências"

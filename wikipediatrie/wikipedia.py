@@ -4,34 +4,68 @@ import pypandoc
 import bz2
 from xml.sax import parse as parse_sax
 from xml.sax.handler import ContentHandler
-import sys
 
 
 class TrieBuilder:
     regex = re.compile("\w+", re.U)
+    max_word_length = 256
+    partial_save_thresold = 10000
 
     def __init__(self, file):
         self.file = file
         self.trie = TrieNode()
-        self.article_count = 0
         self.pandoc = False
 
-    def build_trie(self):
+    def build_trie(self, output_file=None):
+        self.output_file = output_file
         with bz2.BZ2File(self.file, "r") as file:
+            self.bz2_file = file
+            self.articles_to_skip = 0
+            self.article_count = 0
+
+            if self.output_file:
+                try:
+                    self.trie = TrieNode.from_file(self.output_file)
+                    if hasattr(self.trie, "progress"):
+                        self.articles_to_skip = self.trie.progress
+                except:
+                    pass
+
             parse_sax(file, WikipediaContentHandler(self))
+            self.bz2_file = None
+
+            if self.output_file:
+                delattr(self.trie, "progress")
+                self.trie.to_file(output_file)
 
     def add_article(self, text):
+        if self.articles_to_skip != 0:
+            self.articles_to_skip -= 1
+            self.article_count += 1
+            if self.progress_handler:
+                self.progress_handler(self.article_count)
+            return
+
         if self.pandoc:
             try:
                 text = pypandoc.convert_text(text, format="mediawiki", to="plain")
             except:
+                import logging
+                logging.error()
                 text = ""
+
         for word in TrieBuilder.regex.findall(text):
-            if len(word) < 256:
+            if len(word) < TrieBuilder.max_word_length:
                 self.trie.add(word)
         self.article_count += 1
+
         if self.progress_handler:
             self.progress_handler(self.article_count)
+
+        if self.output_file:
+            if self.article_count % self.partial_save_thresold == 0:
+                self.trie.progress = self.article_count
+                self.trie.to_file(self.output_file)
 
 
 class WikipediaContentHandler(ContentHandler):
