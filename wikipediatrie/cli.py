@@ -21,17 +21,17 @@ def cli():
 @cli.command()
 @click.argument("dump")
 @click.argument("trie_file")
-def generate(dump, trie_file):
+@click.option("--pandoc/--regex", default=False)
+def generate(dump, trie_file, pandoc):
     trie_builder = TrieBuilder(dump)
+    trie_builder.pandoc = pandoc
 
     def progress_handler(count):
         click.echo("\r" + str(count) + " artigos processados", nl=False)
 
     trie_builder.progress_handler = progress_handler
-    trie_builder.build_trie()
-
     with open(trie_file, "wb") as file:
-        trie_builder.trie.to_file(file)
+        trie_builder.build_trie()
 
 @cli.command()
 @click.argument("trie_file")
